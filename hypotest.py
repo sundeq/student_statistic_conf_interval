@@ -3,43 +3,57 @@
 import random
 import math
 import statistics
+import numpy
 
 def main():
 
-    n_samples = 200
-    displacement = 0.2
-
-    random_floats = [random.random() for x in range(0, n_samples)]
+    n_samples = 1000
+    dist_mean = 0
+    displacement = 0.05
+    right_displaced_dist_mean = dist_mean + displacement
+    random_std_dev = random.random()
+    normal_random_floats = numpy.random.normal(dist_mean, random_std_dev, n_samples)
     
-    displaced_random_floats = list(map(lambda x : x + displacement, [random.random() for x in range(0, n_samples)]))
+    normal_displaced_random_floats = numpy.random.normal(right_displaced_dist_mean, random_std_dev, n_samples)
+     
+    print("nrf confidence interval:", student_confidence_interval(normal_random_floats))
+    print("ndrf confidence interval:", student_confidence_interval(normal_displaced_random_floats))
 
-    
+    print("absolute t statistic: {}".format(abs(t_test_two_tails(normal_random_floats, 0))))
+    print("absolue t statistic: {}".format(abs(t_test_two_tails(normal_random_floats, 2))))
+
+'''
+Given a null hypothesis value, calculates the t-test test statistic.
+'''
+def t_test_two_tails(samples, mu0):
+    n_samples = len(samples)
+    xbar = sample_mean(samples, n_samples)
+    s2 = sample_variation(samples, xbar, n_samples)
+    sample_std_dev = math.sqrt(s2)
+    print("xbar {}".format(xbar))
+    return (xbar - mu0) / (sample_std_dev / math.sqrt(n_samples))
+
+'''
+Calculates confidence interval using Student's t-distribution. We assume that the number of samples is large when choosing critical value.
+'''
+def student_confidence_interval(samples):
+    n_samples = len(samples)
     STUDENT_CRITICAL_VALUE = 1.960 # Student critical value for confidence level 95% and infinite degrees of freedom
     
-    rf_mean = 1 / n_samples * sum(random_floats)
-    drf_mean = 1 / n_samples * sum(displaced_random_floats)
+    xbar = sample_mean(samples, n_samples) 
+    s2 = sample_variation(samples, xbar, n_samples)
+    sample_std_dev = math.sqrt(s2)
 
-    rf_sample_var_terms = [(xi - rf_mean)**2 for xi in random_floats]
-    drf_sample_var_terms = [(xi - drf_mean)**2 for xi in displaced_random_floats]
+    lower_confidence_bound = xbar - (STUDENT_CRITICAL_VALUE * (sample_std_dev / math.sqrt(n_samples)))
+    upper_confidence_bound = xbar + (STUDENT_CRITICAL_VALUE * (sample_std_dev / math.sqrt(n_samples)))
+    return [lower_confidence_bound, upper_confidence_bound]
 
-    rf_sample_var = 1 / (n_samples - 1) * sum(rf_sample_var_terms)
-    drf_sample_var = 1 / (n_samples - 1) * sum(drf_sample_var_terms)
-    
-    print("rf mean: {} rf smple var: {}".format(rf_mean, rf_sample_var))
-    print("drf mean: {} drf smple var: {}".format(drf_mean, drf_sample_var))
+def sample_mean(samples, n_samples):
+    return sum(samples) / n_samples
 
-    print("python vals")
-    print("py: rf mean: {} rf smple var: {}".format(statistics.mean(random_floats), statistics.variance(random_floats)))
-    print("py: drf mean: {} drf smple var: {}".format(statistics.mean(displaced_random_floats), statistics.variance(displaced_random_floats)))
-
-    rf_lower_confidence_bound = rf_mean - (STUDENT_CRITICAL_VALUE * (rf_sample_var / math.sqrt(n_samples)))
-    rf_higher_confidence_bound = rf_mean + (STUDENT_CRITICAL_VALUE * (rf_sample_var / math.sqrt(n_samples)))
-    
-    drf_lower_confidence_bound = drf_mean - (STUDENT_CRITICAL_VALUE * (drf_sample_var / math.sqrt(n_samples)))
-    drf_higher_confidence_bound = drf_mean + (STUDENT_CRITICAL_VALUE * (drf_sample_var / math.sqrt(n_samples)))
-
-    print("rf confidence:", [rf_lower_confidence_bound, rf_higher_confidence_bound])
-    print("drf confidence:", [drf_lower_confidence_bound, drf_higher_confidence_bound])
+def sample_variation(samples, sample_mean, n_samples):
+    sample_var_terms = [(xi - sample_mean)**2 for xi in samples]
+    return sum(sample_var_terms) / (n_samples - 1)
 
 if __name__ == '__main__':
     main()
